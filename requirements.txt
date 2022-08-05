@@ -4,4 +4,11 @@ pandas
 numpy
 matplotlib
 sklearn
+ipykernel
+pyYAML
+requests
+dill
+evidently
+urllib3
 -e .
+

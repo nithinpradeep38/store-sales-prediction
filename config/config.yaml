@@ -1,0 +1,10 @@
+training_pipeline_config:
+  pipeline_name: sales
+  artifact_dir: artifact
+
+data_ingestion_config:
+  train_download_url: https://raw.githubusercontent.com/nithinpradeep38/datasets/main/Train.csv
+  test_download_url: https://raw.githubusercontent.com/nithinpradeep38/datasets/main/Test.csv
+  ingested_train_dir: train
+  ingested_test_dir: test
+  

@@ -2,12 +2,12 @@ import logging
 from datetime import datetime
 import os
 import pandas as pd
-from sales.constant import get_current_time_stamp
+from sales.constant import CURRENT_TIME_STAMP
 
 LOG_DIR="logs"
 
 def get_log_file_name():
-    return f"log_{get_current_time_stamp()}.log"
+    return f"log_{CURRENT_TIME_STAMP}.log" 
 
 LOG_FILE_NAME=get_log_file_name()
 
