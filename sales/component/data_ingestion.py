@@ -64,6 +64,8 @@ class DataIngestion:
             is_ingested= True,
             message= "Data Ingestion completed successfully")
 
+            logging.info(f"Data Ingestion artifact: {data_ingestion_artifact}")
+
             return data_ingestion_artifact
 
 
