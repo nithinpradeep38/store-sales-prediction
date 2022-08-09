@@ -82,7 +82,7 @@ class DataValidation:
             train_df,test_df = self.get_train_and_test_df()
 
 
-            profile.calculate(train_df.drop(['Item_Outlet_Sales'], axis=1),test_df)
+            profile.calculate(train_df,test_df)
 
             report = json.loads(profile.json())
 
@@ -100,7 +100,7 @@ class DataValidation:
         try:
             dashboard = Dashboard(tabs=[DataDriftTab()])
             train_df,test_df = self.get_train_and_test_df()
-            dashboard.calculate(train_df.drop(['Item_Outlet_Sales'],axis=1), test_df)
+            dashboard.calculate(train_df, test_df)
 
             report_page_file_path = self.data_validation_config.report_page_file_path
             report_page_dir = os.path.dirname(report_page_file_path)

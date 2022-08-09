@@ -24,18 +24,26 @@ class Configuration:
 
             data_ingestion_info= self.config_info[DATA_INGESTION_CONFIG_KEY]
 
-            train_download_url= data_ingestion_info[TRAIN_DOWNLOAD_URL_KEY]
+            dataset_download_url= data_ingestion_info[DATA_INGESTION_DOWNLOAD_URL_KEY]
 
-            test_download_url= data_ingestion_info[TEST_DOWNLOAD_URL_KEY]
+            raw_data_dir= os.path.join(data_ingestion_artifact_dir,
+            data_ingestion_info[DATA_INGESTION_RAW_DATA_DIR_KEY]
+            )
 
-            ingested_train_dir= os.path.join(data_ingestion_artifact_dir, data_ingestion_info[INGESTED_TRAIN_DIR_KEY])
+            ingested_data_dir = os.path.join(
+                data_ingestion_artifact_dir,
+                data_ingestion_info[DATA_INGESTION_INGESTED_DIR_NAME_KEY]
+            )
+            ingested_train_dir= os.path.join(ingested_data_dir, data_ingestion_info[DATA_INGESTION_INGESTED_TRAIN_DIR_KEY])
 
-            ingested_test_dir= os.path.join(data_ingestion_artifact_dir, data_ingestion_info[INGESTED_TEST_DIR_KEY])
+            ingested_test_dir= os.path.join(ingested_data_dir, data_ingestion_info[DATA_INGESTION_INGESTED_TEST_DIR_KEY])
 
-            data_ingestion_config= DataIngestionConfig(train_download_url=train_download_url,
-            test_download_url=test_download_url,
-            ingested_train_dir= ingested_train_dir,
-            ingested_test_dir= ingested_test_dir)
+            data_ingestion_config=DataIngestionConfig(
+                dataset_download_url=dataset_download_url,  
+                raw_data_dir=raw_data_dir, 
+                ingested_train_dir=ingested_train_dir, 
+                ingested_test_dir=ingested_test_dir
+            )
 
             logging.info(f"Data Ingestion Config: {data_ingestion_config}")
 
@@ -79,7 +87,53 @@ class Configuration:
             raise SalesException(e,sys) from e
 
     def get_data_transformation_config(self)-> DataTransformationConfig:
-        pass
+            
+        try:    
+            artifact_dir = self.training_pipeline_config.artifact_dir
+
+            data_transformation_artifact_dir=os.path.join(
+                artifact_dir,
+                DATA_TRANSFORMATION_ARTIFACT_DIR,
+                self.current_time_stamp
+            )
+
+            data_transformation_config_info=self.config_info[DATA_TRANSFORMATION_CONFIG_KEY]
+
+
+            preprocessed_object_file_path = os.path.join(
+                data_transformation_artifact_dir,
+                data_transformation_config_info[DATA_TRANSFORMATION_PREPROCESSING_DIR_KEY],
+                data_transformation_config_info[DATA_TRANSFORMATION_PREPROCESSED_FILE_NAME_KEY]
+            )
+
+            
+            transformed_train_dir=os.path.join(
+            data_transformation_artifact_dir,
+            data_transformation_config_info[DATA_TRANSFORMATION_DIR_NAME_KEY],
+            data_transformation_config_info[DATA_TRANSFORMATION_TRAIN_DIR_NAME_KEY]
+            )
+
+
+            transformed_test_dir = os.path.join(
+            data_transformation_artifact_dir,
+            data_transformation_config_info[DATA_TRANSFORMATION_DIR_NAME_KEY],
+            data_transformation_config_info[DATA_TRANSFORMATION_TEST_DIR_NAME_KEY]
+
+            )
+            
+
+            data_transformation_config=DataTransformationConfig(
+                transformed_train_dir=transformed_train_dir,
+                transformed_test_dir=transformed_test_dir,
+                preprocessed_object_file_path=preprocessed_object_file_path
+            )
+
+            logging.info(f"Data transformation config: {data_transformation_config}")
+
+            return data_transformation_config
+
+        except Exception as e:
+            raise SalesException(e,sys) from e
 
     def get_model_trainer_config(self)-> ModelTrainerConfig:
         pass
