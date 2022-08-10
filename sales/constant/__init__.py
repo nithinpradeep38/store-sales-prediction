@@ -1,8 +1,10 @@
 import os
-from datetime import datetime
+import datetime
+
 
 def get_current_time_stamp():
-    return f"{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    return f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+
 
     
 ROOT_DIR = os.getcwd()  #to get current working directory
@@ -40,6 +42,11 @@ DATA_TRANSFORMATION_TEST_DIR_NAME_KEY = "transformed_test_dir"
 DATA_TRANSFORMATION_PREPROCESSING_DIR_KEY = "preprocessing_dir"
 DATA_TRANSFORMATION_PREPROCESSED_FILE_NAME_KEY = "preprocessed_object_file_name"
 
+
+NUMERICAL_COLUMN_KEY= "numerical_columns"
+CATEGORICAL_COLUMN_KEY= "categorical_columns"
+DATASET_SCHEMA_COLUMNS_KEY= "columns"
+TARGET_COLUMN_KEY= "target_column"
 
 # Training pipeline related variable
 TRAINING_PIPELINE_CONFIG_KEY = "training_pipeline_config"
