@@ -25,12 +25,91 @@ class FeatureGenerator(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, X, y= None):
-       try:
-            X[:,self.Outlet_Establishment_Year_id]= 2022- X[:,self.Outlet_Establishment_Year_id]
+        
+        try:
+
+            X= pd.DataFrame(X, columns= ['Item_Weight', 
+                                        'Item_Visibility', 
+                                        'Item_MRP', 
+                                        'Outlet_Establishment_Year'])
                 
+            X.iloc[:,self.Outlet_Establishment_Year_id]= 2022- X.iloc[:,self.Outlet_Establishment_Year_id]
+                                
             return X
-       except Exception as e:
-        raise SalesException(e,sys) from e 
+                
+        except Exception as e:
+            raise SalesException(e,sys) from e 
+
+class CategoryGenerator(BaseEstimator, TransformerMixin):
+
+
+    def __init__(self,  
+                 Item_Identifier_id= 0, 
+                 Item_Fat_Content_id=1, 
+                 Item_Type_id= 2, 
+                 Outlet_Identifier_id=3
+                ):
+        self.Item_Identifier_id= Item_Identifier_id
+        self.Item_Fat_Content_id= Item_Fat_Content_id
+        self.Item_Type_id= Item_Type_id
+        self.Outlet_Identifier_id= Outlet_Identifier_id
+        
+        
+
+    def fit(self, X, y= None):
+        return self
+    
+    def transform(self, X, y= None):
+            try:
+                X= pd.DataFrame(X, columns= ['Item_Identifier',
+                                            'Item_Fat_Content',
+                                            'Item_Type',
+                                            'Outlet_Identifier',
+                                            'Outlet_Size',
+                                            'Outlet_Location_Type',
+                                            'Outlet_Type'])
+                
+                X.iloc[:,self.Item_Identifier_id]= X.iloc[:,self.Item_Identifier_id].map(
+                    {"Low Fat": 'Low Fat', "LF": "Low Fat", 'low fat': "Low Fat", "Regular": "Regular"})
+                
+                X.iloc[:, self.Item_Fat_Content_id]= X.iloc[:, self.Item_Fat_Content_id].apply(lambda x: x[0:2]).map(
+                    {"FD": "Food", "DR": "Drink", "NC": "Non_consumable"})
+                
+                item_grouping_dict= {'Dairy': 'Dairy',
+                                'Soft Drinks': 'Soft Drinks',
+                                'Meat': 'rare',
+                                'Fruits and Vegetables': 'Fruits and Vegetables',
+                                'Household': 'Household',
+                                'Baking Goods': 'Baking Goods',
+                                'Snack Foods': 'Snack Foods',
+                                'Frozen Foods': 'Frozen Foods',
+                                'Breakfast': 'rare',
+                                'Health and Hygiene': 'Health and Hygiene',
+                                'Hard Drinks': 'rare',
+                                'Canned': 'Canned',
+                                'Breads': 'rare',
+                                'Starchy Foods': 'rare',
+                                'Others': 'rare',
+                                'Seafood': 'rare'}
+                
+                X.iloc[:, self.Item_Type_id]= X.iloc[:, self.Item_Type_id].map(item_grouping_dict)
+                
+                Outlet_grouping_dict= {  'OUT049': 'Cluster0',
+                                        'OUT018': 'OUT018',
+                                        'OUT010': 'Cluster1',
+                                        'OUT013': 'Cluster0',
+                                        'OUT027': 'OUT027',
+                                        'OUT045': 'OUT045',
+                                        'OUT017': 'Cluster0',
+                                        'OUT046': 'Cluster0',
+                                        'OUT035': 'OUT035',
+                                        'OUT019': 'Cluster1'
+                                    }
+                X.iloc[:, self.Outlet_Identifier_id]= X.iloc[:, self.Outlet_Identifier_id].map(Outlet_grouping_dict)
+                
+                return X
+            except Exception as e:
+                raise SalesException(e,sys) from e
 
 class DataTransformation:
 
@@ -60,14 +139,14 @@ class DataTransformation:
 
             num_pipeline = Pipeline(steps=[
                 ('imputer', SimpleImputer(strategy="median")),
-                 ('feature_generator', FeatureGenerator()),
+                ('feature_generator', FeatureGenerator()),
                 ('scaler', StandardScaler())
             ]
             )
 
-
             cat_pipeline = Pipeline(steps=[
-                 ('impute', SimpleImputer(strategy="most_frequent")),
+                ('impute', SimpleImputer(strategy="most_frequent")),
+                 ( 'classgenerator', CategoryGenerator()),
                  ('one_hot_encoder', OneHotEncoder()),
                  ('scaler', StandardScaler(with_mean=False))
             ]
@@ -144,9 +223,9 @@ class DataTransformation:
 
             #logging.info(f"Size of input feature train array and input feature test array df are {input_feature_train_arr.shape} & {input_feature_test_arr.shape}")
             #logging.info(f"size of target feature train array is {np.array(target_feature_train_df).shape}")
-            train_arr = np.c_[ input_feature_train_arr.toarray(), np.array(target_feature_train_df)]
+            train_arr = np.c_[ input_feature_train_arr, np.array(target_feature_train_df)]
 
-            test_arr = np.c_[input_feature_test_arr.toarray(), np.array(target_feature_test_df)]
+            test_arr = np.c_[input_feature_test_arr, np.array(target_feature_test_df)]
             
             transformed_train_dir = self.data_transformation_config.transformed_train_dir
             transformed_test_dir = self.data_transformation_config.transformed_test_dir
