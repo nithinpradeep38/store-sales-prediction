@@ -17,6 +17,7 @@ class DataValidation:
         data_ingestion_artifact:DataIngestionArtifact):
         
         try:
+            logging.info(f"{'='*20}Data Validation log started.{'='*20} \n\n")
             self.data_validation_config= data_validation_config
             self.data_ingestion_artifact= data_ingestion_artifact
 

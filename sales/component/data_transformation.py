@@ -118,7 +118,7 @@ class DataTransformation:
                  data_validation_artifact: DataValidationArtifact
                  ):
         try:
-            logging.info(f"{'>>' * 30}Data Transformation log started.{'<<' * 30} ")
+            logging.info(f"{'>>'*30}Data Transformation log started.{'<<'*30} \n\n")
             self.data_transformation_config= data_transformation_config
             self.data_ingestion_artifact = data_ingestion_artifact
             self.data_validation_artifact = data_validation_artifact

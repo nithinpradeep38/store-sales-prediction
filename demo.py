@@ -5,8 +5,10 @@ from sales.logger import logging
 
 def main():
     try:
-        pipeline= Pipeline()
-        pipeline.run_pipeline()
+        pipeline = Pipeline()
+        #pipeline.run_pipeline()
+        pipeline.start()
+        logging.info("main function execution completed.")
 
     except Exception as e:
         logging.error(f"{e}")
