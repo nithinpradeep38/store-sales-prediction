@@ -36,15 +36,15 @@ class SalesData:
         except Exception as e:
             raise SalesException(e, sys) from e
 
-    def get_housing_input_data_frame(self):
+    def get_sales_input_data_frame(self):
 
         try:
-            housing_input_dict = self.get_housing_data_as_dict()
-            return pd.DataFrame(housing_input_dict)
+            sales_input_dict = self.get_sales_data_as_dict()
+            return pd.DataFrame(sales_input_dict)
         except Exception as e:
             raise SalesException(e, sys) from e
 
-    def get_housing_data_as_dict(self):
+    def get_sales_data_as_dict(self):
         try:
             input_data = {
                 "Item_Identifier": [self.Item_Identifier],
@@ -65,7 +65,7 @@ class SalesData:
             raise SalesException(e, sys)
 
 
-class App_predictor:
+class Salespredictor:
 
     def __init__(self, model_dir: str):
         try:
@@ -87,7 +87,7 @@ class App_predictor:
         try:
             model_path = os.path.join(self.model_dir , "model.pkl")
             model = load_object(file_path=model_path)
-            median_house_value = model.predict(X)
-            return median_house_value
+            item_outlet_sales = model.predict(X)
+            return item_outlet_sales
         except Exception as e:
             raise SalesException(e, sys) from e
