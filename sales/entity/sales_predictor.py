@@ -85,7 +85,7 @@ class Salespredictor:
 
     def predict(self, X):
         try:
-            model_path = os.path.join(self.model_dir , "model.pkl")
+            model_path = self.get_latest_model_path()
             model = load_object(file_path=model_path)
             item_outlet_sales = model.predict(X)
             return item_outlet_sales
