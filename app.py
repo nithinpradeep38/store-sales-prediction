@@ -1,23 +1,28 @@
-from multiprocessing.dummy import Pipe
-from xml.etree.ElementTree import PI
+
 from flask import Flask,request
-import sys
+from sales.util.util import read_yaml,write_yaml_file
+import json
 
 from matplotlib.style import context
 from sales.logger import logging
 from sales.exception import SalesException
 import os,sys
+from sales.config.configuration import Configuration
+from sales.constant import get_current_time_stamp
+from sales.logger import get_log_dataframe
 from sales.pipeline.pipeline import Pipeline
 from sales.entity.sales_predictor import Salespredictor,SalesData
+from sales.constant import CONFIG_DIR, get_current_time_stamp
+
 from flask import send_file, abort, render_template
 ROOT_DIR = os.getcwd()
-LOG_FOLDER_NAME = "sales_logs"
+LOG_FOLDER_NAME = "logs"
 PIPELINE_FOLDER_NAME = "sales"
 SAVED_MODELS_DIR_NAME = "saved_models"
 LOG_DIR = os.path.join(ROOT_DIR, LOG_FOLDER_NAME)
 PIPELINE_DIR = os.path.join(ROOT_DIR, PIPELINE_FOLDER_NAME)
 MODEL_DIR = os.path.join(ROOT_DIR, SAVED_MODELS_DIR_NAME)
-
+MODEL_CONFIG_FILE_PATH = os.path.join(ROOT_DIR,CONFIG_DIR,"model.yaml")
 SALES_DATA_KEY = "sales_data"
 ITEM_OUTLET_SALES_KEY = "item_outlet_sales"
 
@@ -49,7 +54,7 @@ def render_artifact_dir(req_path):
         return send_file(abs_path)
 
     # Show directory contents
-    files = {os.path.join(abs_path, file): file for file in os.listdir(abs_path)}
+    files = {os.path.join(abs_path, file_name): file_name for file_name in os.listdir(abs_path) if "artifact" in os.path.join(abs_path,file_name)}
 
     result = {
         "files": files,
@@ -69,19 +74,24 @@ def index():
 
 @app.route('/view_experiment_hist', methods=['GET', 'POST'])
 def view_experiment_history():
-    
-    experiment_list = pipeline.get_experiment_history()
+    experiment_df = Pipeline.get_experiments_status()
     context = {
-        "experiment_list":[experiment.to_html(classes='table table-striped') for experiment in experiment_list]
+        "experiment":experiment_df.to_html(classes='table table-striped col-12')
     }
     return render_template('experiment_history.html',context=context)
 
 @app.route('/train', methods=['GET', 'POST'])
 def train():
-    if not pipeline.experiment.running_status:
+    message=""
+    pipeline=Pipeline(config=Configuration(current_time_stamp=get_current_time_stamp()))
+    if not Pipeline.experiment.running_status:
+        message="Training started."
         pipeline.start()
+    else:
+        message="Training is already in progress."
     context = {
-        "experiment": pipeline.get_experiment_status().to_html(classes='table table-striped')
+        "experiment": pipeline.get_experiments_status().to_html(classes='table table-striped col-12'  ),
+        "message":message
     }
     return render_template('train.html',context=context)
 
@@ -156,13 +166,31 @@ def saved_models_dir(req_path):
     }
     return render_template('saved_models_files.html', result=result)
 
+@app.route("/update_model_config",methods=['GET','POST'])
+def update_model_config():
+    try:
+        if request.method=='POST':
+            model_config = request.form['new_model_config']
+            model_config = model_config.replace("'",'"')
+            print(model_config)
+            model_config =json.loads(model_config)
 
-@app.route('/logs', defaults={'req_path': 'logs'})
-@app.route('/logs/<path:req_path>')
+            write_yaml_file(file_path=MODEL_CONFIG_FILE_PATH,data=model_config)
+
+        model_config=  read_yaml(file_path=MODEL_CONFIG_FILE_PATH)
+        return render_template('update_model.html', result={"model_config":model_config})
+
+    except  Exception as e:
+        logging.exception(e)
+        return str(e)
+
+
+@app.route(f'/logs', defaults={'req_path': f'{LOG_FOLDER_NAME}'})
+@app.route(f'/{LOG_FOLDER_NAME}/<path:req_path>')
 def render_log_dir(req_path):
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(LOG_FOLDER_NAME, exist_ok=True)
     # Joining the base and the requested path
-    print(f"req_path: {req_path}")
+    logging.info(f"req_path: {req_path}")
     abs_path = os.path.join(req_path)
     print(abs_path)
     # Return 404 if path doesn't exist
@@ -171,7 +199,9 @@ def render_log_dir(req_path):
 
     # Check if path is a file and serve
     if os.path.isfile(abs_path):
-        return send_file(abs_path)
+        log_df = get_log_dataframe(abs_path)
+        context = {"log":log_df.to_html(classes="table-striped",index=False)}
+        return render_template('log.html', context=context)
 
     # Show directory contents
     files = {os.path.join(abs_path, file): file for file in os.listdir(abs_path)}

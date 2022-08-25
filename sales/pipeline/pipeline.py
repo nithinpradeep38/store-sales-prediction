@@ -16,27 +16,27 @@ from sales.exception import SalesException
 from sales.logger import logging,get_log_file_name
 import pandas as pd
 import os, sys
-from sales.constant import EXPERIMENT_DIR_NAME
+from sales.constant import EXPERIMENT_DIR_NAME, EXPERIMENT_FILE_NAME
 
 from sales.entity.artifact_entity import DataIngestionArtifact, DataValidationArtifact, DataTransformationArtifact
 from sales.entity.artifact_entity import ModelEvaluationArtifact, ModelPusherArtifact, ModelTrainerArtifact
 from sales.entity.config_entity import DataIngestionConfig, ModelEvaluationConfig
 
-Experiment = namedtuple("Experiment",["experiment_id","initialization_timestamp","log_file_name",
-"running_status","start_time","stop_time","execution_time","message","experiment_file_path"])
+config = Configuration()
+os.makedirs(config.training_pipeline_config.artifact_dir,exist_ok=True)
+
+Experiment = namedtuple("Experiment",["experiment_id","initialization_timestamp","artifact_time_stamp",
+"running_status","start_time","stop_time","execution_time","message","experiment_file_path","accuracy","is_model_accepted"])
 
 class Pipeline(Thread):
 
-    experiment:Experiment= Experiment(*([None]*9))
+    experiment:Experiment= Experiment(*([None]*11))
 
-    def __new__(cls, *args,**kwargs):
-        if Pipeline.experiment.running_status:
-            raise Exception("Pipeline is already running")
-        return super(Pipeline,cls).__new__(cls)
+    experiment_file_path = os.path.join(config.training_pipeline_config.artifact_dir,
+    EXPERIMENT_DIR_NAME,EXPERIMENT_FILE_NAME)
 
-    def __init__(self, config: Configuration = Configuration()) -> None:
+    def __init__(self, config: Configuration = config) -> None:
         try:
-            Thread.__init__(self)
             super().__init__(daemon=False, name="pipeline")
             self.config = config
         except Exception as e:
@@ -125,13 +125,15 @@ class Pipeline(Thread):
             
             Pipeline.experiment = Experiment(experiment_id=experiment_id,
             initialization_timestamp=self.config.current_time_stamp,
-            log_file_name=get_log_file_name(self.config.current_time_stamp),
+            artifact_time_stamp=self.config.current_time_stamp,
             running_status=True,
             start_time=datetime.now(),
             stop_time=None,
             execution_time=None,
-            experiment_file_path=experiment_file_path,
-            message="Pipeline has been started."
+            experiment_file_path=Pipeline.experiment_file_path,
+            is_model_accepted=None,
+            message="Pipeline has been started.",
+            accuracy=None
             )
             logging.info(f"Pipeline experiment: {Pipeline.experiment}")
 
@@ -159,13 +161,15 @@ class Pipeline(Thread):
             stop_time= datetime.now()
             Pipeline.experiment = Experiment(experiment_id=Pipeline.experiment.experiment_id,
             initialization_timestamp=self.config.current_time_stamp,
-            log_file_name=get_log_file_name(self.config.current_time_stamp),
-            running_status=True,
+            artifact_time_stamp=self.config.current_time_stamp,
+            running_status=False,
             start_time=Pipeline.experiment.start_time,
             stop_time=stop_time,
             execution_time=stop_time-Pipeline.experiment.start_time,
             experiment_file_path= Pipeline.experiment.experiment_file_path,
-            message="Pipeline has been completed."
+            message="Pipeline has been completed.",
+            is_model_accepted=model_evaluation_artifact.is_model_accepted,
+            accuracy=model_trainer_artifact.model_accuracy
             )
             logging.info(f"Pipeline experiment: {Pipeline.experiment}")
             self.save_experiment()
@@ -184,41 +188,35 @@ class Pipeline(Thread):
             if Pipeline.experiment.experiment_id is not None:
                 experiment = Pipeline.experiment
                 experiment_report = pd.DataFrame(zip(experiment._fields,experiment))
-                experiment_report.to_csv(experiment.experiment_file_path,mode="w",index=False,header=False)
+                experiment_dict = experiment._asdict()
+                experiment_dict:dict = { key:[value] for key,value in experiment_dict.items() }
+
+                experiment_dict.update({ 
+                    "created_time_stamp":[datetime.now()],
+                    "experiment_file_path":[os.path.basename(Pipeline.experiment.experiment_file_path)]})
+
+                experiment_report = pd.DataFrame(experiment_dict)
+
+                os.makedirs(os.path.dirname(Pipeline.experiment_file_path),exist_ok=True)
+                if os.path.exists(Pipeline.experiment_file_path):
+                    experiment_report.to_csv(Pipeline.experiment_file_path,index=False,header=False,mode="a")
+                else:
+                    experiment_report.to_csv(Pipeline.experiment_file_path,mode="w",index=False,header=True)
             else:
                 print("First start experiment")
         except Exception as e:
             raise SalesException(e,sys) from e    
     
-    def get_experiment_history(self,limit=5)->List[pd.DataFrame]:
+    @classmethod
+    def get_experiments_status(cls,limit:int=5)->pd.DataFrame:
         try:
-            experiment_dir=os.path.join(self.config.training_pipeline_config.artifact_dir,EXPERIMENT_DIR_NAME)
-
-            if not os.path.exists(experiment_dir):
-                return [pd.DataFrame()]
-
-            experiment_files = os.listdir(experiment_dir)
-
-            if len(experiment_files)==0:
-                return [pd.DataFrame()]
-            experiment_files.sort(reverse=True)
-            experiment_dataframe_list:pd.DataFrame=[]
-            
-            for file_name in experiment_files[:limit]:
-                experiment_file_path = os.path.join(experiment_dir,file_name)
-                experiment_dataframe_list.append(pd.read_csv(experiment_file_path))
-            return experiment_dataframe_list
-        except Exception as e:
-            raise SalesException(e,sys) from e
-
-    def get_experiment_status(self,)->pd.DataFrame:
-        try:
-            if Pipeline.experiment.experiment_id is not None:
-                return pd.read_csv(Pipeline.experiment.experiment_file_path,header=None)
+            if os.path.exists(Pipeline.experiment_file_path):
+                df= pd.read_csv(Pipeline.experiment_file_path)
+                limit=-1*int(limit)
+                return  df[limit:].drop(columns=["experiment_file_path","initialization_timestamp"],axis=1)
             else:
                 return pd.DataFrame()
-                print("Experment is not yet started")
         except Exception as e:
-            raise SalesException(e,sys)
+            raise SalesException(e,sys) from e
             
         
